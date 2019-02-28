@@ -2,8 +2,6 @@
 
 namespace Nuvola\AwsLambdaFramework\Lambda;
 
-use Nuvola\AwsLambdaFramework\Exception\InvocationException;
-
 class Request
 {
     /**
@@ -32,7 +30,7 @@ class Request
     private $headers;
 
     /**
-     * @var string
+     * @var string|null
      */
     private $body;
 
@@ -41,7 +39,7 @@ class Request
      */
     private $isBase64Encoded;
 
-    private function __construct(\ArrayObject $context, string $httpMethod, string $path, \ArrayObject $queryStringParameters, \ArrayObject $headers, string $body, bool $isBase64Encoded)
+    private function __construct(\ArrayObject $context, string $httpMethod, string $path, \ArrayObject $queryStringParameters, \ArrayObject $headers, string $body = null, bool $isBase64Encoded = false)
     {
         $this->context = $context;
         $this->httpMethod = $httpMethod;
@@ -52,47 +50,16 @@ class Request
         $this->isBase64Encoded = $isBase64Encoded;
     }
 
-    public static function createFromInvocation(string $url, array &$headers): self
+    public static function create(array $data): self
     {
-        $curl = \curl_init();
-
-        \curl_setopt($curl, \CURLOPT_URL, $url);
-        \curl_setopt($curl, \CURLOPT_RETURNTRANSFER, true);
-        \curl_setopt(
-            $curl,
-            \CURLOPT_HEADERFUNCTION,
-            function ($curl, string $tr) use (&$headers) {
-                $td = \explode(': ', $tr, 2);
-
-                if (isset($td[1])) {
-                    $headers[$td[0]] = \trim($td[1]);
-                }
-
-                return \strlen($tr);
-            }
-        );
-
-        if (false === ($response = \curl_exec($curl))) {
-            throw new InvocationException(\curl_error($curl));
-        }
-
-        \curl_close($curl);
-
-        return Request::createFromJson($response);
-    }
-
-    private static function createFromJson(string $json): self
-    {
-        $json = \json_decode($json, true);
-
         return new self(
-            new \ArrayObject($json['requestContext']),
-            $json['httpMethod'],
-            $json['path'],
-            new \ArrayObject($json['queryStringParameters']),
-            new \ArrayObject($json['headers']),
-            $json['body'],
-            $json['isBase64Encoded']
+            new \ArrayObject($data['requestContext']),
+            $data['httpMethod'],
+            $data['path'],
+            new \ArrayObject($data['queryStringParameters'] ?? []),
+            new \ArrayObject($data['headers'] ?? []),
+            $data['body'],
+            $data['isBase64Encoded']
         );
     }
 
@@ -130,7 +97,7 @@ class Request
         return $this->headers->offsetGet($key);
     }
 
-    public function getBody(): string
+    public function getBody(): ?string
     {
         return $this->body;
     }

@@ -2,9 +2,7 @@
 
 namespace Nuvola\AwsLambdaFramework\Lambda;
 
-use Nuvola\AwsLambdaFramework\Exception\InvocationException;
-
-class Response
+class Response implements \JsonSerializable
 {
     /**
      * @var array
@@ -21,29 +19,9 @@ class Response
         ;
     }
 
-    public function send(string $invocation): void
+    public function jsonSerialize(): array
     {
-        $content = \json_encode($this->response);
-
-        $curl = \curl_init();
-
-        \curl_setopt($curl, \CURLOPT_URL, $invocation);
-        \curl_setopt($curl, \CURLOPT_POST, true);
-        \curl_setopt($curl, \CURLOPT_POSTFIELDS, $content);
-        \curl_setopt(
-            $curl,
-            \CURLOPT_HTTPHEADER,
-            [
-                'Content-Type: application/json',
-                'Content-Length: ' . \strlen($content)
-            ]
-        );
-
-        if (false === \curl_exec($curl)) {
-            throw new InvocationException(\curl_error($curl));
-        }
-
-        \curl_close($curl);
+        return $this->response;
     }
 
     public function getStatusCode(): int
